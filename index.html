@@ -1,0 +1,28 @@
+<!-- extend from base layout -->
+{% extends "base.html" %}
+
+{% block content %}
+
+      <h1>Wasy API</h1>
+  <div><a id=lnk-ca    href="/get_ca">Get CA</a></div>
+  <div><a id=lnk-key   href="/get_server_key">Cet Server key</a></div>
+  <div><a id=lnk-crt   href="/get_server_crt">Get Server Cert</a></div>
+  <div><a id=lnk-ta    href="/get_ta">Get Server Ta</a></div>
+  <div><a id=lnk-dh    href="/get_dh">Get dh</a></div>
+  <div><a id=lnk-crl    href="/get_crl">Get crl</a></div>
+  <div><a id=lnk-get-client href="/get_client">Get Client</a></div>
+  <div><a id=lnk-add-client href="/add_client">Add Client</a></div>
+  <div><a id=lnk-revoke-client href="/revoke_client">Revoke Client</a></div>
+  <div><a id=lnk-view-client href="/view_clients">View CA Clients</a></div>
+
+<form method="get" name="add_client">
+      <p>Create CA NAME:<input type="text" name="cn" size="64">
+      </p>
+      <a href=# id=lnk-add-client><button class='btn btn-default'>Submit</button></a>
+  </form>
+
+
+<div><p id=result> </p></div>
+<div><p id=turl> </p></div>
+
+{% endblock %}
