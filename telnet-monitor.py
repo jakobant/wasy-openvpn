@@ -8,8 +8,8 @@ import logging
 import time
 from datadog import initialize
 options = {
-    'api_key': 'c06481d50c5f3afa3a62c82deb8a14ad',
-    'app_key': 'fa8a8be4f47b3ef05174520aad84d9de2b23ea5d'
+    'api_key': 'xxx',
+    'app_key': 'xxx'
 }
 initialize(**options)
 logging.basicConfig(level=logging.DEBUG)
