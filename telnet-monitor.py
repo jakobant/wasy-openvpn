@@ -121,11 +121,11 @@ AUTH-PAM: BACKGROUND: user 'jakobant' failed to authenticate: Authentication fai
             match = login.match(line)
             if match:
                 print(line)
-                self.stats.event('Login success', line, tags=self.tags)
+                self.stats.event('Login success', line, alert_type='success', tags=self.tags)
             match = faild_login.match(line)
             if match:
                 print(line)
-                self.stats.event('Authentication failure', line, tags=self.tags)
+                self.stats.event('Authentication failure', line, alert_type='error', tags=self.tags)
 
 if __name__ == "__main__":
     monitor = OpenvpnMonitor(os.getenv('MHOST'), int(os.getenv('MPORT')), 60)
