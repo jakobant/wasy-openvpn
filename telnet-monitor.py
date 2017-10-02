@@ -68,7 +68,7 @@ class OpenvpnMonitor():
         """OpenVPN Version: OpenVPN 2.4.3 x86_64-redhat-linux-gnu [Fedora EPEL patched] [SSL (OpenSSL)] [LZO] [LZ4] [EPOLL] [PKCS11] [MH/PKTINFO] [AEAD] built on Jun 21 2017
 OpenVPN Version: OpenVPN 2.3.14 x86_64-alpine-linux-musl [SSL (OpenSSL)] [LZO] [EPOLL] [MH] [IPv6] built on Dec 18 2016"""
         ver = version.split(" ")
-        tags = "{}_{}".format(ver[2], ver[3])
+        tags = ["version:{}_{}".format(ver[2], ver[3])]
         self.tags+=tags
 
     def parse_loadstats(self, loadstats, datadog=True, elastic=False):
@@ -103,6 +103,7 @@ CLIENT_LIST,globbi,192.168.1.112:56513,10.8.0.18,,2735402,5955826,Sun Oct  1 20:
                 if self.datadog:
                     tags = ['commonname:{}'.format(o_stats[COMMONNAME]),
                             'real_addr:{}'.format(o_stats[REAL_ADDR].split(":")[0]),
+                            'virt_addr:{}'.format(o_stats[VIRT_ADDR]),
                             'username:{}'.format(o_stats[USERNAME])] + self.tags
                     connected_time = int(time.time()) - int(o_stats[CONN_SINCET])
                     self.stats.gauge('openvpn.client.bytesin', o_stats[BYTESIN], tags=tags)
@@ -137,9 +138,6 @@ if __name__ == "__main__":
         status = monitor.get_status()
         monitor.parse_status(status)
         monitor.disconnect()
-        monitor.tail_log("/tmp/openvpn.log")
+        monitor.tail_log(os.getenv('OVPN_LOGS', '/var/log/openvpn.log'))
         time.sleep(60)
-    #monitor.flush_stats()
 
-    #for data in monitor.get_status().splitlines():
-    #    print(data)
