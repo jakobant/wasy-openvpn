@@ -58,7 +58,7 @@ class OpenvpnMonitor():
         return self.get_data()
 
     def get_data(self):
-        socket_list = [sys.stdin, self.s]
+        socket_list = [self.s]
         read_sockets, write_sockets, error_sockets = select.select(socket_list, [], [])
         for sock in read_sockets:
             data = sock.recv(16384)
@@ -132,7 +132,8 @@ if __name__ == "__main__":
     while 1:
         monitor.connect()
         print(monitor.get_data())
-        monitor.parse_version(monitor.get_version())
+        version = monitor.get_version()
+        monitor.parse_version(version)
         loadstats = monitor.get_loadstats()
         monitor.parse_loadstats(loadstats)
         status = monitor.get_status()

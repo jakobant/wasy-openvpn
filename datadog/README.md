@@ -36,7 +36,7 @@ app_key=
 ## Configure OpenVPN
 Enable management console, add to the openvpn server config.
 
-```shell
+    ```shell
 management 127.0.0.1 5555
 ```
 
