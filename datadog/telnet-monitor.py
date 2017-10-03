@@ -116,7 +116,7 @@ Fri Sep 29 21:31:57 2017 192.168.1.112:62787 VERIFY OK: depth=1, C=IS, ST=Rkv, L
 Fri Sep 29 21:31:57 2017 192.168.1.112:62787 VERIFY OK: depth=0, C=IS, ST=Rkv, L=Reykjavik, O=Heima, OU=Ops, CN=globbi, name=EasyRSA, emailAddress=jakobant@gmail.com
 AUTH-PAM: BACKGROUND: user 'jakobant' failed to authenticate: Authentication failure"""
         login = re.compile(r".*authentication succeeded.*")
-        faild_login = re.compile(r".*failed to authenticate.*")
+        faild_login = re.compile(r".*(failed to authenticate|Incorrect password|was not found).*")
         for line in Pygtail(logfile):
             match = login.match(line)
             if match:
