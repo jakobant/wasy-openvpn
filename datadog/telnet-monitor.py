@@ -30,19 +30,22 @@ class OpenvpnMonitor():
         self.s = None
         self.datadog = datadog
         self.stats = ThreadStats()
-        self.stats.start(flush_interval=interval)
+        self.stats.start(flush_interval=interval, flush_in_thread=False)
         self.tags = global_tag
 
     def connect(self):
-        self.s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.s.settimeout(2)
         try:
-            self.s.connect((self.host, self.port))
+            self.s = socket.create_connection((self.host, self.port), 2)
         except:
             print('Unable to connect')
             sys.exit()
 
+    def flush_datadog(self):
+        self.stats.flush()
+
     def disconnect(self):
+        self.s.send('quit\n'.encode('ascii'))
+        self.s.shutdown(socket.SHUT_RDWR)
         self.s.close()
 
     def get_loadstats(self):
@@ -61,7 +64,7 @@ class OpenvpnMonitor():
         socket_list = [self.s]
         read_sockets, write_sockets, error_sockets = select.select(socket_list, [], [])
         for sock in read_sockets:
-            data = sock.recv(16384)
+            data = sock.recv(65565)
         return data.decode('utf8')
 
     def parse_version(self, version, datadog=True, elastic=False):
@@ -140,5 +143,6 @@ if __name__ == "__main__":
         monitor.parse_status(status)
         monitor.disconnect()
         monitor.tail_log(os.getenv('OVPN_LOGS', '/var/log/openvpn.log'))
+        monitor.flush_datadog()
         time.sleep(60)
 
