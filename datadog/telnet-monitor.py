@@ -10,17 +10,6 @@ from datadog import initialize
 from datadog import ThreadStats
 from pygtail import Pygtail
 
-options = {
-    'api_key': os.getenv('DD_API_KEY'),
-    'app_key': os.getenv('DD_APP_KEY')
-}
-initialize(**options)
-logging.basicConfig(level=logging.DEBUG)
-global_tag = ['server:{}'.format(os.uname()[1]),
-               'type:openvpn']
-
-# main function
-
 class OpenvpnMonitor():
 
     def __init__(self, monitor_host, monitor_port, interval, datadog=True, elstic=False):
@@ -29,9 +18,11 @@ class OpenvpnMonitor():
         self.interval = interval
         self.s = None
         self.datadog = datadog
+        self.init_datadog()
         self.stats = ThreadStats()
         self.stats.start(flush_interval=interval, flush_in_thread=False)
-        self.tags = global_tag
+        self.tags = ['server:{}'.format(os.uname()[1]),
+                      'type:openvpn']
 
     def connect(self):
         try:
@@ -39,6 +30,15 @@ class OpenvpnMonitor():
         except:
             print('Unable to connect')
             sys.exit()
+
+    def init_datadog(self):
+        options = {
+            'api_key': os.getenv('DD_API_KEY'),
+            'app_key': os.getenv('DD_APP_KEY')
+        }
+        initialize(**options)
+        logging.basicConfig(level=logging.DEBUG)
+
 
     def flush_datadog(self):
         self.stats.flush()
@@ -145,4 +145,5 @@ if __name__ == "__main__":
         monitor.tail_log(os.getenv('OVPN_LOGS', '/var/log/openvpn.log'))
         monitor.flush_datadog()
         time.sleep(60)
+        monitor.init_datadog()
 

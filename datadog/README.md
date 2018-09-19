@@ -9,7 +9,7 @@ and Login Failures and send to DataDog as events.
 ### Overview
 ![Overview](https://github.com/jakobant/wasy-openvpn/raw/master/datadog/DataDogOpenvpnOverview.png)
 ### Timeboard
-![Timeboard](https://github.com/jakobant/wasy-openvpn/raw/master/datadog/DataDogOpenvpnTimeboard.png)
+§![Timeboard](https://github.com/jakobant/wasy-openvpn/raw/master/datadog/DataDogOpenvpnTimeboard.png)
 
 ## Install
 Python, add datadog and pygtail
