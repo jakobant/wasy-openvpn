@@ -1,4 +1,3 @@
-#!env python
 import socket
 import select
 import sys
@@ -6,23 +5,25 @@ import os
 import re
 import logging
 import time
-from datadog import initialize
-from datadog import ThreadStats
+from datadog import initialize, statsd
 from pygtail import Pygtail
+
 
 class OpenvpnMonitor():
 
-    def __init__(self, monitor_host, monitor_port, interval, datadog=True, elstic=False):
+    def __init__(self, monitor_host, monitor_port, interval, datadog=True):
         self.host = monitor_host
         self.port = monitor_port
         self.interval = interval
+        options = {"statsd_host": "127.0.0.1", "statsd_port": 8125}
+        initialize(**options)
         self.s = None
-        self.datadog = datadog
-        self.init_datadog()
-        self.stats = ThreadStats()
-        self.stats.start(flush_interval=interval, flush_in_thread=False)
+        logging.basicConfig(level=logging.DEBUG)
         self.tags = ['server:{}'.format(os.uname()[1]),
                       'type:openvpn']
+
+    def send_events(self, title, message, alert_type="info"):
+        statsd.event(title, message, alert_type=alert_type, tags=self.tags)
 
     def connect(self):
         try:
@@ -30,18 +31,6 @@ class OpenvpnMonitor():
         except:
             print('Unable to connect')
             sys.exit()
-
-    def init_datadog(self):
-        options = {
-            'api_key': os.getenv('DD_API_KEY'),
-            'app_key': os.getenv('DD_APP_KEY')
-        }
-        initialize(**options)
-        logging.basicConfig(level=logging.DEBUG)
-
-
-    def flush_datadog(self):
-        self.stats.flush()
 
     def disconnect(self):
         self.s.send('quit\n'.encode('ascii'))
@@ -74,15 +63,15 @@ OpenVPN Version: OpenVPN 2.3.14 x86_64-alpine-linux-musl [SSL (OpenSSL)] [LZO] [
         tags = ["version:{}_{}".format(ver[2], ver[3])]
         self.tags+=tags
 
-    def parse_loadstats(self, loadstats, datadog=True, elastic=False):
+    def parse_loadstats(self, loadstats):
+        o_stats = None
         pattern = re.compile(r"SUCCESS:.*nclients=(?P<nclients>\d*),bytesin=(?P<bytesin>\d*),bytesout=(?P<bytesout>\d*).*")
         for line in loadstats.splitlines():
             o_stats = pattern.match(line)
         if o_stats:
-            if self.datadog:
-                self.stats.gauge('openvpn.nclients', o_stats.group('nclients'), tags=self.tags)
-                self.stats.gauge('openvpn.bytesin', o_stats.group('bytesin'), tags=self.tags)
-                self.stats.gauge('openvpn.bytesout', o_stats.group('bytesout'), tags=self.tags)
+            statsd.gauge('openvpn.nclients', o_stats.group('nclients'), tags=self.tags)
+            statsd.gauge('openvpn.bytesin', o_stats.group('bytesin'), tags=self.tags)
+            statsd.gauge('openvpn.bytesout', o_stats.group('bytesout'), tags=self.tags)
 
     def parse_status(self, status):
         """HEADER,CLIENT_LIST,Common Name,Real Address,Virtual Address,Bytes Received,Bytes Sent,Connected Since,Connected Since (time_t),Username
@@ -103,15 +92,15 @@ CLIENT_LIST,globbi,192.168.1.112:56513,10.8.0.18,,2735402,5955826,Sun Oct  1 20:
                     BYTESOUT = 5  # 5
                     USERNAME = 8  # 8
                     CONN_SINCET = 7  # 7
-                if self.datadog:
-                    tags = ['commonname:{}'.format(o_stats[COMMONNAME]),
-                            'real_addr:{}'.format(o_stats[REAL_ADDR].split(":")[0]),
-                            'virt_addr:{}'.format(o_stats[VIRT_ADDR]),
-                            'username:{}'.format(o_stats[USERNAME])] + self.tags
-                    connected_time = int(time.time()) - int(o_stats[CONN_SINCET])
-                    self.stats.gauge('openvpn.client.bytesin', o_stats[BYTESIN], tags=tags)
-                    self.stats.gauge('openvpn.client.bytesout', o_stats[BYTESOUT], tags=tags)
-                    self.stats.gauge('openvpn.client.conntime', connected_time, tags=tags)
+
+                tags = ['commonname:{}'.format(o_stats[COMMONNAME]),
+                        'real_addr:{}'.format(o_stats[REAL_ADDR].split(":")[0]),
+                        'virt_addr:{}'.format(o_stats[VIRT_ADDR]),
+                        'username:{}'.format(o_stats[USERNAME])] + self.tags
+                connected_time = int(time.time()) - int(o_stats[CONN_SINCET])
+                statsd.gauge('openvpn.client.bytesin', o_stats[BYTESIN], tags=tags)
+                statsd.gauge('openvpn.client.bytesout', o_stats[BYTESOUT], tags=tags)
+                statsd.gauge('openvpn.client.conntime', connected_time, tags=tags)
 
     def tail_log(self, logfile):
         """Fri Sep 29 21:29:59 2017 192.168.1.112:62493 TLS: Username/Password authentication succeeded for username 'jakobant'
@@ -124,14 +113,15 @@ AUTH-PAM: BACKGROUND: user 'jakobant' failed to authenticate: Authentication fai
             match = login.match(line)
             if match:
                 print(line)
-                self.stats.event('Login success', line, alert_type='success', tags=self.tags)
+                self.send_events('Login success', line, alert_type='success')
             match = faild_login.match(line)
             if match:
                 print(line)
-                self.stats.event('Authentication failure', line, alert_type='error', tags=self.tags)
+                self.send_events('Authentication failure', line, alert_type='error')
+
 
 if __name__ == "__main__":
-    monitor = OpenvpnMonitor(os.getenv('MHOST'), int(os.getenv('MPORT')), 60)
+    monitor = OpenvpnMonitor(os.getenv('MHOST', '127.0.0.1'), int(os.getenv('MPORT', '5555')), 60)
     while 1:
         monitor.connect()
         print(monitor.get_data())
@@ -143,7 +133,5 @@ if __name__ == "__main__":
         monitor.parse_status(status)
         monitor.disconnect()
         monitor.tail_log(os.getenv('OVPN_LOGS', '/var/log/openvpn.log'))
-        monitor.flush_datadog()
         time.sleep(60)
-        monitor.init_datadog()
 
